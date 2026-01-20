@@ -67,7 +67,7 @@
 
         try {
             // URL düzeltildi: getBaseUrl() kullanılıyor
-            const response = await fetch(`${getBaseUrl()}/oneriler?q=${encodeURIComponent(query)}`);
+            const response = await fetch(`{/oneriler?q=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             if (data.length > 0) {
@@ -113,7 +113,7 @@
     async function fetchDetay(path) {
         try {
             // URL düzeltildi: getBaseUrl() kullanılıyor
-            const response = await fetch(`${getBaseUrl()}/detay?path=${encodeURIComponent(path)}`);
+            const response = await fetch(`/detay?path=${encodeURIComponent(path)}`);
             const data = await response.json();
             
             const randomId = "id_" + Date.now();
