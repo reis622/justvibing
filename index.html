@@ -54,7 +54,8 @@
     const searchResultList = document.getElementById('searchResultList');
 
     // YEREL AYAR: İsteklerin 5000 portundaki Flask'a gitmesini sağlar
-    const getBaseUrl = () => "http://127.0.0.1:5000";
+    //const getBaseUrl = () => "http://127.0.0.1:5000";
+    const getBaseUrl = () => window.location.origin;
 
     async function performSearch() {
         const query = isimInput.value.trim();
@@ -67,7 +68,7 @@
 
         try {
             // URL düzeltildi: getBaseUrl() kullanılıyor
-            const response = await fetch(`{/oneriler?q=${encodeURIComponent(query)}`);
+            const response = await fetch(`${getBaseUrl()}/oneriler?q=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             if (data.length > 0) {
@@ -113,7 +114,7 @@
     async function fetchDetay(path) {
         try {
             // URL düzeltildi: getBaseUrl() kullanılıyor
-            const response = await fetch(`/detay?path=${encodeURIComponent(path)}`);
+            const response = await fetch(`${getBaseUrl()}/detay?path=${encodeURIComponent(path)}`);
             const data = await response.json();
             
             const randomId = "id_" + Date.now();
