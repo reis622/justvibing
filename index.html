@@ -18,31 +18,22 @@
 <body class="h-screen w-screen flex justify-center items-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 font-sans">
 
 <div class="flex flex-col rounded-3xl border-4 border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden relative">
-    
-    <div class="data-container flex flex-col items-center w-[450px] sm:w-[500px] h-[650px] overflow-y-auto gap-4 p-6" id="dataContainer">
-    </div>
+    <div class="data-container flex flex-col items-center w-[450px] sm:w-[500px] h-[650px] overflow-y-auto gap-4 p-6" id="dataContainer"></div>
 
     <div id="searchResultPanel" class="absolute inset-0 bg-slate-900/95 z-50 p-6 flex flex-col hidden">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-white font-black uppercase tracking-widest text-lg">Arama Sonuçları</h3>
             <button onclick="closeResults()" class="text-white/50 hover:text-white text-3xl transition-colors">&times;</button>
         </div>
-        <div id="searchResultList" class="flex flex-col gap-3 overflow-y-auto pr-2">
-        </div>
+        <div id="searchResultList" class="flex flex-col gap-3 overflow-y-auto pr-2"></div>
     </div>
 
     <div class="inputbox p-6 bg-white/5 border-t-2 border-white/10 flex flex-col gap-3">
         <div class="flex gap-2 relative">
-            <input type="text" 
-                   class="input flex-1 p-3 rounded-xl bg-white/10 border border-white/20 outline-none focus:ring-2 ring-green-400 text-white font-medium" 
-                   placeholder="Futbolcu veya Takım ara..." 
-                   id="futbolcuIsmi" 
-                   autocomplete="off"/>
-            
-            <button class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95" 
-                    id="inputButton">ARA</button>
+            <input type="text" class="input flex-1 p-3 rounded-xl bg-white/10 border border-white/20 outline-none focus:ring-2 ring-green-400 text-white font-medium" placeholder="Futbolcu veya Takım ara..." id="futbolcuIsmi" autocomplete="off"/>
+            <button class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95" id="inputButton">ARA</button>
         </div>
-        <p class="text-white/20 text-[9px] text-center uppercase tracking-widest italic tracking-wider">Doğru oyuncuyu seçmek için arama yapın</p>
+        <p class="text-white/20 text-[9px] text-center uppercase tracking-widest italic">Doğru oyuncuyu seçmek için arama yapın</p>
     </div>
 </div>
 
@@ -53,8 +44,7 @@
     const searchPanel = document.getElementById('searchResultPanel');
     const searchResultList = document.getElementById('searchResultList');
 
-    // YEREL AYAR: İsteklerin 5000 portundaki Flask'a gitmesini sağlar
-    //const getBaseUrl = () => "http://127.0.0.1:5000";
+    // Dinamik URL: Nerede yüklüyse orayı baz alır
     const getBaseUrl = () => window.location.origin;
 
     async function performSearch() {
@@ -67,8 +57,8 @@
         searchPanel.classList.remove('hidden');
 
         try {
-            // URL düzeltildi: getBaseUrl() kullanılıyor
-            const response = await fetch(`/oneriler?q=${encodeURIComponent(query)}`);
+            // "getBaseUrl()" kullanılarak Render üzerindeki adrese gider
+            const response = await fetch(`${getBaseUrl()}/oneriler?q=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             if (data.length > 0) {
@@ -77,44 +67,16 @@
                 searchResultList.innerHTML = '<p class="text-red-400 text-center py-10 font-bold">Maalesef sonuç bulunamadı.</p>';
             }
         } catch (error) {
-            console.error("Hata:", error);
-            searchResultList.innerHTML = '<p class="text-red-400 text-center py-10">Sunucu hatası! app.py çalışıyor mu? (Port: 5000)</p>';
+            searchResultList.innerHTML = '<p class="text-red-400 text-center py-10">Bağlantı Hatası!</p>';
         } finally {
             inputButton.innerText = "ARA";
             inputButton.disabled = false;
         }
     }
 
-    function renderSearchResults(results) {
-        searchResultList.innerHTML = '';
-        results.forEach(p => {
-            const div = document.createElement('div');
-            div.className = "result-item p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 cursor-pointer transition-all";
-            div.innerHTML = `
-                <img src="${p.photo}" class="w-12 h-16 rounded-lg object-cover border border-white/10" onerror="this.src='https://via.placeholder.com/50x65?text=?'">
-                <div class="flex-1">
-                    <p class="text-white font-bold text-base leading-none">${p.name}</p>
-                    <p class="text-green-400 text-[10px] font-bold uppercase mt-2 tracking-tighter">${p.club}</p>
-                </div>
-                <span class="text-white/20 text-xs font-bold bg-white/5 px-3 py-1 rounded-full group-hover:bg-green-500 group-hover:text-white transition-all">SEÇ</span>
-            `;
-            div.onclick = () => {
-                closeResults();
-                fetchDetay(p.id);
-            };
-            searchResultList.appendChild(div);
-        });
-    }
-
-    function closeResults() {
-        searchPanel.classList.add('hidden');
-        isimInput.value = "";
-    }
-
     async function fetchDetay(path) {
         try {
-            // URL düzeltildi: getBaseUrl() kullanılıyor
-            const response = await fetch(`/detay?path=${encodeURIComponent(path)}`);
+            const response = await fetch(`${getBaseUrl()}/detay?path=${encodeURIComponent(path)}`);
             const data = await response.json();
             
             const randomId = "id_" + Date.now();
@@ -128,9 +90,7 @@
                     <button onclick="deleteCard('${randomId}')" class="delete-btn absolute top-4 right-4 w-7 h-7 flex items-center justify-center bg-white/10 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10">
                         <span class="text-lg leading-none">&times;</span>
                     </button>
-
                     <div class="flex flex-wrap gap-1 mb-4 pr-8">${kupaHTML}</div>
-                    
                     <div class="flex items-start gap-6 mb-6">
                         <div class="relative">
                             <div class="absolute -inset-1 bg-green-500 rounded-2xl blur opacity-20"></div>
@@ -138,9 +98,7 @@
                         </div>
                         <div class="flex-1">
                             <h2 class="text-2xl font-black uppercase tracking-tighter leading-tight">${data.isim}</h2>
-                            <p class="text-white/40 text-[9px] mb-2 truncate max-w-[150px]">${data.tam_isim}</p>
                             <p class="text-green-400 font-bold text-xs uppercase mb-3">${data.takim}</p>
-                            
                             <div class="grid grid-cols-1 gap-1 text-[10px]">
                                 <div class="flex justify-between border-b border-white/5 pb-1"><span>DOĞUM:</span> <b class="text-white">${data.dogum}</b></div>
                                 <div class="flex justify-between border-b border-white/5 pb-1"><span>AYAK:</span> <b class="text-white">${data.ayak}</b></div>
@@ -148,7 +106,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3 mb-5">
                         <div class="bg-white/5 p-3 rounded-xl border border-white/10 text-[9px]">
                             <p class="text-white/40 font-bold uppercase text-[8px] mb-1">Mevki / Uyruk</p>
@@ -159,41 +116,33 @@
                             <p class="font-medium text-red-400">${data.sozlesme_bit}</p>
                         </div>
                     </div>
-
                     <div class="flex justify-between items-end pt-3 border-t border-white/10">
                         <div>
                             <p class="text-[9px] text-white/40 uppercase font-black mb-1 tracking-widest">Piyasa Değeri</p>
                             <p class="text-4xl font-black text-green-400 tracking-tighter drop-shadow-lg">${data.piyasa_degeri}</p>
                         </div>
-                        <div class="flex flex-col items-end gap-1">
-                            <img src="https://www.transfermarkt.com.tr/favicon.ico" class="w-5 h-5 opacity-30">
-                            <span class="text-[8px] text-white/20 uppercase font-bold">Live Data</span>
-                        </div>
+                        <img src="https://www.transfermarkt.com.tr/favicon.ico" class="w-5 h-5 opacity-30">
                     </div>
                 </div>`;
             
             renderCard(cardHTML);
             localStorage.setItem(randomId, cardHTML);
-        } catch (e) { alert("Sunucu hatası veya veri çekilemedi!"); }
+        } catch (e) { alert("Veri çekilemedi!"); }
     }
 
+    // Geri kalan fonksiyonlar (renderCard, deleteCard, getDbItems) aynı kalsın...
     function renderCard(htmlContent) {
         const wrapper = document.createElement('div');
         wrapper.className = "card card-animate glow-effect w-full bg-slate-900/90 rounded-3xl shadow-2xl border border-white/10 mb-4 transform transition-all hover:scale-[1.01]";
         wrapper.innerHTML = htmlContent;
         dataContainer.insertAdjacentElement('afterbegin', wrapper);
     }
-
     function deleteCard(id) {
         const cardBody = document.getElementById(id);
         const card = cardBody.closest('.card');
         card.classList.add('opacity-0', 'scale-75', 'duration-300');
-        setTimeout(() => {
-            localStorage.removeItem(id);
-            card.remove();
-        }, 300);
+        setTimeout(() => { localStorage.removeItem(id); card.remove(); }, 300);
     }
-
     function getDbItems() {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -201,7 +150,6 @@
             if (value && value.includes('card-body')) renderCard(value);
         }
     }
-
     inputButton.addEventListener("click", performSearch);
     isimInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
     window.onload = getDbItems;

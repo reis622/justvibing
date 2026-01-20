@@ -5,11 +5,9 @@ from bs4 import BeautifulSoup
 import re
 import os
 
-# Yerel çalışma için klasör yollarını netleştiriyoruz
+# Render için klasör yolları
 current_dir = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__, 
-            template_folder=current_dir, # HTML dosyasının olduğu yer
-            static_folder=current_dir)   # Varsa resim/css klasörü için
+app = Flask(__name__, template_folder=current_dir, static_folder=current_dir)
 CORS(app)
 
 HEADERS = {
@@ -18,7 +16,6 @@ HEADERS = {
 
 @app.route('/')
 def home():
-    # Yerelde index.html dosyasını direkt sunar
     return render_template('index.html')
 
 @app.route('/oneriler')
@@ -32,23 +29,25 @@ def oneriler():
         
         if "profil" in res.url:
             h1 = soup.find('h1')
-            return jsonify([{"id": res.url.split("transfermarkt.com.tr")[1], "name": h1.get_text(strip=True) if h1 else "Bilinmiyor", "photo": "", "club": "Direkt Sonuç"}])
+            return jsonify([{"id": res.url.split("transfermarkt.com.tr")[1], "name": h1.get_text(strip=True) if h1 else "Sonuç", "photo": "", "club": "Direkt Profil"}])
 
         results = []
         table = soup.find('table', class_='items')
         if table:
             for row in table.find_all('tr', class_=['odd', 'even'])[:10]:
-                link = row.find('td', class_='hauptlink').find('a')
-                img = row.find('img')
-                results.append({
-                    "id": link['href'], 
-                    "name": link.text.strip(), 
-                    "photo": img['src'] if img else "", 
-                    "club": "Futbolcu"
-                })
+                link_tag = row.find('td', class_='hauptlink')
+                if link_tag and link_tag.find('a'):
+                    link = link_tag.find('a')
+                    img = row.find('img')
+                    results.append({
+                        "id": link['href'],
+                        "name": link.text.strip(),
+                        "photo": img['src'] if img else "",
+                        "club": "Futbolcu"
+                    })
         return jsonify(results)
     except Exception as e:
-        return jsonify({"hata": str(e)})
+        return jsonify([])
 
 @app.route('/detay')
 def detay():
@@ -58,6 +57,17 @@ def detay():
         res = requests.get(url, headers=HEADERS, timeout=10)
         soup = BeautifulSoup(res.content, 'html.parser')
         
+        # Piyasa Değeri: Spandan önceki saf metni çekiyoruz (Örn: 12.00)
+        market_val = "Veri Yok"
+        mv_wrapper = soup.find('a', class_='data-header__market-value-wrapper')
+        if mv_wrapper:
+            val_text = mv_wrapper.find(text=True, recursive=False)
+            waehrung = mv_wrapper.find('span', class_='waehrung')
+            if val_text:
+                market_val = val_text.strip()
+                if waehrung:
+                    market_val += " " + waehrung.get_text(strip=True)
+
         details = {}
         info_elements = soup.find_all('span', class_='info-table__content--regular')
         for label in info_elements:
@@ -65,14 +75,6 @@ def detay():
             val_span = label.find_next_sibling('span', class_='info-table__content--bold')
             if val_span:
                 details[key] = val_span.get_text(" ", strip=True)
-
-        market_val = "Veri Yok"
-        val_div = soup.find('div', class_='tm-player-market-value-main__current-value')
-        if val_div: 
-            market_val = val_div.get_text(strip=True)
-        else:
-            forum_link = soup.find('a', href=re.compile(r"thread/forum"))
-            if forum_link: market_val = forum_link.get_text(strip=True)
 
         photo_container = soup.find('div', class_='data-header__profile-container')
         photo_url = photo_container.find('img')['src'].replace("small", "header") if photo_container and photo_container.find('img') else ""
@@ -83,21 +85,18 @@ def detay():
             count = box.find('span', class_='data-header__success-number')
             if img and count: achievements.append({"title": img['title'], "count": count.text.strip()})
 
-        # İsimdeki bitişikliği önlemek için boşlukla temizleme
         h1_title = soup.find('h1')
         isim_temiz = h1_title.get_text(" ", strip=True) if h1_title else "Bilinmiyor"
 
         return jsonify({
             "isim": isim_temiz,
             "tam_isim": details.get("Anavatandaki isim", "-"),
-            "dogum": details.get("Doğum tarihi/Yaş", details.get("Doğum tarihi", "-")),
-            "dogum_yeri": details.get("Doğum yeri", "-"),
+            "dogum": details.get("Doğum tarihi/Yaş", "-"),
+            "takim": details.get("Güncel kulüp", "Kulüpsüz"),
+            "mevki": details.get("Mevki", "-"),
             "boy": details.get("Boy", "-"),
             "uyruk": details.get("Uyruk", "-"),
-            "mevki": details.get("Mevki", "-"),
             "ayak": details.get("Ayak", "-"),
-            "takim": details.get("Güncel kulüp", "Kulüpsüz"),
-            "sozlesme_bas": details.get("Sözleşme tarihi", "-"),
             "sozlesme_bit": details.get("Sözleşme sonu", "-"),
             "piyasa_degeri": market_val,
             "foto": photo_url,
@@ -106,8 +105,6 @@ def detay():
     except Exception as e:
         return jsonify({"hata": str(e)}), 500
 
-# YEREL ÇALIŞTIRMA AYARI
 if __name__ == '__main__':
-    # host='0.0.0.0' sayesinde aynı ağdaki iPhone'dan da erişebilirsin
-    # debug=True sayesinde kodda hata yaparsan terminalde detayını görürsün
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
