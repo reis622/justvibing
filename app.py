@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import re
 import os
 
-# Render için klasör yolları
 current_dir = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, template_folder=current_dir, static_folder=current_dir)
 CORS(app)
@@ -29,25 +28,18 @@ def oneriler():
         
         if "profil" in res.url:
             h1 = soup.find('h1')
-            return jsonify([{"id": res.url.split("transfermarkt.com.tr")[1], "name": h1.get_text(strip=True) if h1 else "Sonuç", "photo": "", "club": "Direkt Profil"}])
+            return jsonify([{"id": res.url.split("transfermarkt.com.tr")[1], "name": h1.get_text(strip=True) if h1 else "Bilinmiyor", "photo": "", "club": "Direkt Sonuç"}])
 
         results = []
         table = soup.find('table', class_='items')
         if table:
             for row in table.find_all('tr', class_=['odd', 'even'])[:10]:
-                link_tag = row.find('td', class_='hauptlink')
-                if link_tag and link_tag.find('a'):
-                    link = link_tag.find('a')
-                    img = row.find('img')
-                    results.append({
-                        "id": link['href'],
-                        "name": link.text.strip(),
-                        "photo": img['src'] if img else "",
-                        "club": "Futbolcu"
-                    })
+                link = row.find('td', class_='hauptlink').find('a')
+                img = row.find('img')
+                results.append({"id": link['href'], "name": link.text.strip(), "photo": img['src'] if img else "", "club": "Futbolcu"})
         return jsonify(results)
     except Exception as e:
-        return jsonify([])
+        return jsonify({"hata": str(e)})
 
 @app.route('/detay')
 def detay():
@@ -57,12 +49,13 @@ def detay():
         res = requests.get(url, headers=HEADERS, timeout=10)
         soup = BeautifulSoup(res.content, 'html.parser')
         
-        # Piyasa Değeri: Spandan önceki saf metni çekiyoruz (Örn: 12.00)
+        # Piyasa Değeri Çekme (Spandan önceki sayıyı alma)
         market_val = "Veri Yok"
-        mv_wrapper = soup.find('a', class_='data-header__market-value-wrapper')
-        if mv_wrapper:
-            val_text = mv_wrapper.find(text=True, recursive=False)
-            waehrung = mv_wrapper.find('span', class_='waehrung')
+        market_val_wrapper = soup.find('a', class_='data-header__market-value-wrapper')
+        if market_val_wrapper:
+            # recursive=False sayesinde sadece ana etiketin metnini (12.00) alırız
+            val_text = market_val_wrapper.find(text=True, recursive=False)
+            waehrung = market_val_wrapper.find('span', class_='waehrung')
             if val_text:
                 market_val = val_text.strip()
                 if waehrung:
@@ -91,12 +84,14 @@ def detay():
         return jsonify({
             "isim": isim_temiz,
             "tam_isim": details.get("Anavatandaki isim", "-"),
-            "dogum": details.get("Doğum tarihi/Yaş", "-"),
-            "takim": details.get("Güncel kulüp", "Kulüpsüz"),
-            "mevki": details.get("Mevki", "-"),
+            "dogum": details.get("Doğum tarihi/Yaş", details.get("Doğum tarihi", "-")),
+            "dogum_yeri": details.get("Doğum yeri", "-"),
             "boy": details.get("Boy", "-"),
             "uyruk": details.get("Uyruk", "-"),
+            "mevki": details.get("Mevki", "-"),
             "ayak": details.get("Ayak", "-"),
+            "takim": details.get("Güncel kulüp", "Kulüpsüz"),
+            "sozlesme_bas": details.get("Sözleşme tarihi", "-"),
             "sozlesme_bit": details.get("Sözleşme sonu", "-"),
             "piyasa_degeri": market_val,
             "foto": photo_url,
@@ -106,5 +101,5 @@ def detay():
         return jsonify({"hata": str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    # host='0.0.0.0' sayesinde iPhone ile 192.168.x.x üzerinden erişebilirsin
+    app.run(host='0.0.0.0', port=5000, debug=True)

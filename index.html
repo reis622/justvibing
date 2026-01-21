@@ -44,7 +44,7 @@
     const searchPanel = document.getElementById('searchResultPanel');
     const searchResultList = document.getElementById('searchResultList');
 
-    // Dinamik URL: Nerede yüklüyse orayı baz alır
+    // Yerel için origin kullanımı en garantisidir
     const getBaseUrl = () => window.location.origin;
 
     async function performSearch() {
@@ -53,12 +53,11 @@
 
         inputButton.innerText = "ARANIYOR...";
         inputButton.disabled = true;
-        searchResultList.innerHTML = '<p class="text-white/50 text-center py-10">Transfermarkt taranıyor...</p>';
+        searchResultList.innerHTML = '<p class="text-white/50 text-center py-10 text-sm">Transfermarkt taranıyor...</p>';
         searchPanel.classList.remove('hidden');
 
         try {
-            // "getBaseUrl()" kullanılarak Render üzerindeki adrese gider
-            const response = await fetch(`${getBaseUrl()}/oneriler?q=${encodeURIComponent(query)}`);
+            const response = await fetch(`/oneriler?q=${encodeURIComponent(query)}`);
             const data = await response.json();
 
             if (data.length > 0) {
@@ -67,16 +66,43 @@
                 searchResultList.innerHTML = '<p class="text-red-400 text-center py-10 font-bold">Maalesef sonuç bulunamadı.</p>';
             }
         } catch (error) {
-            searchResultList.innerHTML = '<p class="text-red-400 text-center py-10">Bağlantı Hatası!</p>';
+            console.error("Hata:", error);
+            searchResultList.innerHTML = '<p class="text-red-400 text-center py-10">Sunucu hatası! app.py çalışıyor mu?</p>';
         } finally {
             inputButton.innerText = "ARA";
             inputButton.disabled = false;
         }
     }
 
+    function renderSearchResults(results) {
+        searchResultList.innerHTML = '';
+        results.forEach(p => {
+            const div = document.createElement('div');
+            div.className = "result-item p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 cursor-pointer transition-all";
+            div.innerHTML = `
+                <img src="${p.photo}" class="w-12 h-16 rounded-lg object-cover border border-white/10" onerror="this.src='https://via.placeholder.com/50x65?text=?'">
+                <div class="flex-1">
+                    <p class="text-white font-bold text-base leading-none">${p.name}</p>
+                    <p class="text-green-400 text-[10px] font-bold uppercase mt-2 tracking-tighter">${p.club}</p>
+                </div>
+                <span class="text-white/20 text-xs font-bold bg-white/5 px-3 py-1 rounded-full group-hover:bg-green-500 group-hover:text-white transition-all">SEÇ</span>
+            `;
+            div.onclick = () => {
+                closeResults();
+                fetchDetay(p.id);
+            };
+            searchResultList.appendChild(div);
+        });
+    }
+
+    function closeResults() {
+        searchPanel.classList.add('hidden');
+        isimInput.value = "";
+    }
+
     async function fetchDetay(path) {
         try {
-            const response = await fetch(`${getBaseUrl()}/detay?path=${encodeURIComponent(path)}`);
+            const response = await fetch(`/detay?path=${encodeURIComponent(path)}`);
             const data = await response.json();
             
             const randomId = "id_" + Date.now();
@@ -127,22 +153,26 @@
             
             renderCard(cardHTML);
             localStorage.setItem(randomId, cardHTML);
-        } catch (e) { alert("Veri çekilemedi!"); }
+        } catch (e) { console.error(e); }
     }
 
-    // Geri kalan fonksiyonlar (renderCard, deleteCard, getDbItems) aynı kalsın...
     function renderCard(htmlContent) {
         const wrapper = document.createElement('div');
         wrapper.className = "card card-animate glow-effect w-full bg-slate-900/90 rounded-3xl shadow-2xl border border-white/10 mb-4 transform transition-all hover:scale-[1.01]";
         wrapper.innerHTML = htmlContent;
         dataContainer.insertAdjacentElement('afterbegin', wrapper);
     }
+
     function deleteCard(id) {
         const cardBody = document.getElementById(id);
         const card = cardBody.closest('.card');
         card.classList.add('opacity-0', 'scale-75', 'duration-300');
-        setTimeout(() => { localStorage.removeItem(id); card.remove(); }, 300);
+        setTimeout(() => {
+            localStorage.removeItem(id);
+            card.remove();
+        }, 300);
     }
+
     function getDbItems() {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -150,6 +180,7 @@
             if (value && value.includes('card-body')) renderCard(value);
         }
     }
+
     inputButton.addEventListener("click", performSearch);
     isimInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
     window.onload = getDbItems;
