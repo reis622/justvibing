@@ -3,46 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Futbolcu Paneli v2</title>
+    <title>Futbolcu Paneli v2 - Tam Veri</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Kaydırma çubuğu tasarımı */
-        #dataContainer::-webkit-scrollbar { width: 6px; }
+        #dataContainer::-webkit-scrollbar { width: 4px; }
         #dataContainer::-webkit-scrollbar-thumb { background: rgba(34, 197, 94, 0.3); border-radius: 10px; }
         
-        .card-animate { animation: slideIn 0.3s ease-out; }
+        .card-animate { animation: slideIn 0.3s ease-out; font-size: 14px; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         
-        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
+        .glass { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         
-        /* Kartın webde devasa büyümesini engelleyen limit */
-        .player-card { max-width: 400px; width: 100%; }
+        /* Kartların mobilde daralmasını engelleyen zorunlu yükseklik koruması */
+        .player-card { 
+            min-height: fit-content; 
+            width: 100%;
+            max-width: 450px;
+        }
     </style>
 </head>
-<body class="h-screen w-screen bg-slate-950 text-slate-100 font-sans overflow-hidden flex flex-col">
+<body class="min-h-screen w-screen bg-slate-950 text-slate-100 font-sans flex flex-col overflow-x-hidden">
 
-    <header class="p-4 border-b border-white/5 bg-slate-900/50 flex justify-between items-center">
+    <header class="sticky top-0 z-40 p-4 border-b border-white/10 bg-slate-900/80 backdrop-blur-md flex justify-between items-center">
         <h1 class="text-xl font-black tracking-tighter uppercase italic text-green-500">Scout Panel</h1>
-        <span class="text-[10px] text-white/30 hidden sm:block">Web & Mobile Sync</span>
+        <span class="text-[10px] text-white/30 uppercase font-bold">Live Stats</span>
     </header>
 
-    <main id="dataContainer" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start pb-32">
+    <main id="dataContainer" class="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-40">
         </main>
 
     <div id="searchResultPanel" class="fixed inset-0 z-50 glass p-4 flex flex-col hidden">
         <div class="max-w-2xl mx-auto w-full flex flex-col h-full">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-green-500 text-sm tracking-widest uppercase">Arama Sonuçları</h3>
+                <h3 class="font-bold text-green-500 text-sm tracking-widest uppercase">Sonuçlar</h3>
                 <button onclick="closeResults()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full text-2xl">&times;</button>
             </div>
-            <div id="searchResultList" class="flex flex-col gap-3 overflow-y-auto pb-10"></div>
+            <div id="searchResultList" class="flex flex-col gap-3 overflow-y-auto pb-20"></div>
         </div>
     </div>
 
-    <div class="fixed bottom-0 left-0 right-0 glass border-t border-white/10 p-4 z-40">
+    <div class="fixed bottom-0 left-0 right-0 glass border-t border-white/10 p-4 z-40 pb-safe">
         <div class="max-w-xl mx-auto flex gap-2">
-            <input type="text" id="futbolcuIsmi" class="flex-1 bg-white/5 border border-white/10 p-3 rounded-xl text-sm outline-none focus:ring-2 ring-green-500 transition-all" placeholder="Futbolcu ara..." autocomplete="off">
-            <button id="inputButton" class="bg-green-600 hover:bg-green-500 px-8 py-3 rounded-xl font-bold text-sm transition-all active:scale-95">ARA</button>
+            <input type="text" id="futbolcuIsmi" class="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl text-base outline-none focus:ring-2 ring-green-500 transition-all text-white" placeholder="Futbolcu ara..." autocomplete="off">
+            <button id="inputButton" class="bg-green-600 hover:bg-green-500 px-6 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-green-900/20">ARA</button>
         </div>
     </div>
 
@@ -52,23 +56,22 @@
     const dataContainer = document.getElementById('dataContainer');
     const searchPanel = document.getElementById('searchResultPanel');
     const searchResultList = document.getElementById('searchResultList');
+
     const getBaseUrl = () => window.location.origin;
-    //const getBaseUrl = () => "http://127.0.0.1:5000";
+
     async function performSearch() {
         const query = isimInput.value.trim();
         if (query.length < 2) return;
-
         inputButton.innerText = "...";
         inputButton.disabled = true;
         searchResultList.innerHTML = '<div class="flex justify-center py-20"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div></div>';
         searchPanel.classList.remove('hidden');
-
         try {
             const response = await fetch(`/oneriler?q=${encodeURIComponent(query)}`);
             const data = await response.json();
             renderSearchResults(data);
         } catch (error) {
-            searchResultList.innerHTML = '<p class="text-center text-red-400">Hata!</p>';
+            searchResultList.innerHTML = '<p class="text-center text-red-400">Sunucu Hatası!</p>';
         } finally {
             inputButton.innerText = "ARA";
             inputButton.disabled = false;
@@ -83,14 +86,14 @@
         }
         results.forEach(p => {
             const div = document.createElement('div');
-            div.className = "flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:border-green-500/50 cursor-pointer transition-all";
+            div.className = "flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 active:bg-white/10 transition-all";
             div.innerHTML = `
-                <img src="${p.photo}" class="w-10 h-12 rounded object-cover shadow-lg" onerror="this.src='https://via.placeholder.com/40x50'">
+                <img src="${p.photo}" class="w-12 h-16 rounded-lg object-cover shadow-lg" onerror="this.src='https://via.placeholder.com/50x65'">
                 <div class="flex-1">
-                    <p class="text-white font-bold text-sm">${p.name}</p>
-                    <p class="text-green-500 text-[10px] font-bold uppercase">${p.club}</p>
+                    <p class="text-white font-bold text-base leading-tight">${p.name}</p>
+                    <p class="text-green-500 text-xs font-bold uppercase mt-1">${p.club}</p>
                 </div>
-                <span class="text-[10px] bg-green-600 px-2 py-1 rounded font-black">SEÇ</span>
+                <button class="bg-green-600 text-[10px] font-black px-4 py-2 rounded-xl">SEÇ</button>
             `;
             div.onclick = () => { closeResults(); fetchDetay(p.id); };
             searchResultList.appendChild(div);
@@ -105,31 +108,54 @@
             const data = await response.json();
             
             const randomId = "id_" + Date.now();
+            
+            // Başarılar (Kupalar)
+            const kupaHTML = (data.achievements || []).map(a => `
+                <span class="bg-yellow-500/10 text-yellow-500 text-[9px] px-2 py-1 rounded border border-yellow-500/20 whitespace-nowrap">
+                    ${a.count}x ${a.title}
+                </span>`).join('');
+
             const cardHTML = `
-                <div class="player-card card-animate relative bg-slate-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl hover:border-green-500/30 transition-all group" id="${randomId}">
-                    <button onclick="deleteCard('${randomId}')" class="absolute top-3 right-3 w-6 h-6 bg-red-500/10 hover:bg-red-500 text-white rounded-full flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-all">&times;</button>
+                <div class="player-card card-animate relative bg-slate-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col" id="${randomId}">
+                    <button onclick="deleteCard('${randomId}')" class="absolute top-4 right-4 w-8 h-8 bg-red-500/10 hover:bg-red-500 text-white rounded-full flex items-center justify-center z-10 transition-all">&times;</button>
                     
-                    <div class="p-4">
-                        <div class="flex gap-4 items-center mb-4">
-                            <div class="relative min-w-[80px]">
-                                <img src="${data.foto}" class="w-20 h-28 rounded-xl object-cover border border-white/10 bg-slate-800 shadow-xl" onerror="this.src='https://via.placeholder.com/100x140'">
+                    <div class="p-5">
+                        <div class="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar">${kupaHTML}</div>
+                        
+                        <div class="flex gap-5 items-start mb-6">
+                            <div class="relative flex-shrink-0">
+                                <img src="${data.foto}" class="w-24 h-32 rounded-2xl object-cover border border-white/10 bg-slate-800 shadow-2xl" onerror="this.src='https://via.placeholder.com/100x140'">
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <h2 class="text-lg font-black leading-tight uppercase tracking-tighter truncate">${data.isim}</h2>
-                                <p class="text-green-500 font-bold text-[10px] uppercase truncate mb-2">${data.takim}</p>
-                                <div class="space-y-1 text-[9px] text-slate-400 uppercase">
-                                    <div class="flex justify-between border-b border-white/5 pb-0.5"><span>YAŞ:</span> <b class="text-white">${data.dogum}</b></div>
-                                    <div class="flex justify-between border-b border-white/5 pb-0.5"><span>MEVKİ:</span> <b class="text-white">${data.mevki}</b></div>
+                            <div class="flex-1">
+                                <h2 class="text-xl font-black leading-tight uppercase tracking-tighter mb-1">${data.isim}</h2>
+                                <p class="text-green-500 font-bold text-xs uppercase mb-4 tracking-wide">${data.takim}</p>
+                                
+                                <div class="space-y-2 text-[11px] text-slate-400 uppercase font-medium">
+                                    <div class="flex justify-between border-b border-white/5 pb-1"><span>DOĞUM:</span> <b class="text-white">${data.dogum}</b></div>
+                                    <div class="flex justify-between border-b border-white/5 pb-1"><span>MEVKİ:</span> <b class="text-white">${data.mevki}</b></div>
+                                    <div class="flex justify-between border-b border-white/5 pb-1"><span>BOY:</span> <b class="text-white">${data.boy}</b></div>
+                                    <div class="flex justify-between"><span>UYRUK:</span> <b class="text-white">${data.uyruk}</b></div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex justify-between items-end pt-3 border-t border-white/5">
-                            <div>
-                                <p class="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Market Value</p>
-                                <p class="text-2xl font-black text-green-500 tracking-tighter">${data.piyasa_degeri}</p>
+                        <div class="grid grid-cols-2 gap-3 mb-6">
+                            <div class="bg-white/5 p-3 rounded-2xl border border-white/5">
+                                <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Tercih Edilen Ayak</p>
+                                <p class="text-xs font-bold">${data.ayak || '-'}</p>
                             </div>
-                            <img src="https://www.transfermarkt.com.tr/favicon.ico" class="w-4 h-4 opacity-20">
+                            <div class="bg-white/5 p-3 rounded-2xl border border-white/5">
+                                <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Sözleşme Bitiş</p>
+                                <p class="text-xs font-bold text-red-400">${data.sozlesme_bit || '-'}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-end pt-4 border-t border-white/10">
+                            <div>
+                                <p class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Market Value</p>
+                                <p class="text-3xl font-black text-green-500 tracking-tighter">${data.piyasa_degeri}</p>
+                            </div>
+                            <img src="https://www.transfermarkt.com.tr/favicon.ico" class="w-5 h-5 opacity-30 shadow-white">
                         </div>
                     </div>
                 </div>`;
@@ -148,7 +174,7 @@
     function deleteCard(id) {
         const el = document.getElementById(id);
         el.style.opacity = '0';
-        el.style.transform = 'scale(0.9)';
+        el.style.transform = 'translateY(20px)';
         setTimeout(() => { localStorage.removeItem(id); el.remove(); }, 300);
     }
 
