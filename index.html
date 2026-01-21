@@ -2,40 +2,49 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futbolcu Seçim Paneli v2 - Yerel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Futbolcu Paneli v2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        #dataContainer::-webkit-scrollbar, #searchResultList::-webkit-scrollbar { width: 4px; }
-        #dataContainer::-webkit-scrollbar-thumb, #searchResultList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-        .result-item:hover { background: rgba(34, 197, 94, 0.2); transform: translateX(5px); }
-        .card-animate { animation: slideIn 0.4s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .glow-effect { box-shadow: 0 0 20px rgba(34, 197, 94, 0.2); }
-        .delete-btn:hover { background-color: rgba(239, 68, 68, 0.8); transform: rotate(90deg); }
+        /* Kaydırma çubuğu tasarımı */
+        #dataContainer::-webkit-scrollbar { width: 6px; }
+        #dataContainer::-webkit-scrollbar-thumb { background: rgba(34, 197, 94, 0.3); border-radius: 10px; }
+        
+        .card-animate { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
+        
+        /* Kartın webde devasa büyümesini engelleyen limit */
+        .player-card { max-width: 400px; width: 100%; }
     </style>
 </head>
-<body class="h-screen w-screen flex justify-center items-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 font-sans">
+<body class="h-screen w-screen bg-slate-950 text-slate-100 font-sans overflow-hidden flex flex-col">
 
-<div class="flex flex-col rounded-3xl border-4 border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden relative">
-    <div class="data-container flex flex-col items-center w-[450px] sm:w-[500px] h-[650px] overflow-y-auto gap-4 p-6" id="dataContainer"></div>
+    <header class="p-4 border-b border-white/5 bg-slate-900/50 flex justify-between items-center">
+        <h1 class="text-xl font-black tracking-tighter uppercase italic text-green-500">Scout Panel</h1>
+        <span class="text-[10px] text-white/30 hidden sm:block">Web & Mobile Sync</span>
+    </header>
 
-    <div id="searchResultPanel" class="absolute inset-0 bg-slate-900/95 z-50 p-6 flex flex-col hidden">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-white font-black uppercase tracking-widest text-lg">Arama Sonuçları</h3>
-            <button onclick="closeResults()" class="text-white/50 hover:text-white text-3xl transition-colors">&times;</button>
+    <main id="dataContainer" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start pb-32">
+        </main>
+
+    <div id="searchResultPanel" class="fixed inset-0 z-50 glass p-4 flex flex-col hidden">
+        <div class="max-w-2xl mx-auto w-full flex flex-col h-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-green-500 text-sm tracking-widest uppercase">Arama Sonuçları</h3>
+                <button onclick="closeResults()" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full text-2xl">&times;</button>
+            </div>
+            <div id="searchResultList" class="flex flex-col gap-3 overflow-y-auto pb-10"></div>
         </div>
-        <div id="searchResultList" class="flex flex-col gap-3 overflow-y-auto pr-2"></div>
     </div>
 
-    <div class="inputbox p-6 bg-white/5 border-t-2 border-white/10 flex flex-col gap-3">
-        <div class="flex gap-2 relative">
-            <input type="text" class="input flex-1 p-3 rounded-xl bg-white/10 border border-white/20 outline-none focus:ring-2 ring-green-400 text-white font-medium" placeholder="Futbolcu veya Takım ara..." id="futbolcuIsmi" autocomplete="off"/>
-            <button class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95" id="inputButton">ARA</button>
+    <div class="fixed bottom-0 left-0 right-0 glass border-t border-white/10 p-4 z-40">
+        <div class="max-w-xl mx-auto flex gap-2">
+            <input type="text" id="futbolcuIsmi" class="flex-1 bg-white/5 border border-white/10 p-3 rounded-xl text-sm outline-none focus:ring-2 ring-green-500 transition-all" placeholder="Futbolcu ara..." autocomplete="off">
+            <button id="inputButton" class="bg-green-600 hover:bg-green-500 px-8 py-3 rounded-xl font-bold text-sm transition-all active:scale-95">ARA</button>
         </div>
-        <p class="text-white/20 text-[9px] text-center uppercase tracking-widest italic">Doğru oyuncuyu seçmek için arama yapın</p>
     </div>
-</div>
 
 <script>
     const isimInput = document.getElementById('futbolcuIsmi');
@@ -43,31 +52,23 @@
     const dataContainer = document.getElementById('dataContainer');
     const searchPanel = document.getElementById('searchResultPanel');
     const searchResultList = document.getElementById('searchResultList');
-
-    // Yerel için origin kullanımı en garantisidir
     const getBaseUrl = () => window.location.origin;
-
+    //const getBaseUrl = () => "http://127.0.0.1:5000";
     async function performSearch() {
         const query = isimInput.value.trim();
         if (query.length < 2) return;
 
-        inputButton.innerText = "ARANIYOR...";
+        inputButton.innerText = "...";
         inputButton.disabled = true;
-        searchResultList.innerHTML = '<p class="text-white/50 text-center py-10 text-sm">Transfermarkt taranıyor...</p>';
+        searchResultList.innerHTML = '<div class="flex justify-center py-20"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div></div>';
         searchPanel.classList.remove('hidden');
 
         try {
             const response = await fetch(`/oneriler?q=${encodeURIComponent(query)}`);
             const data = await response.json();
-
-            if (data.length > 0) {
-                renderSearchResults(data);
-            } else {
-                searchResultList.innerHTML = '<p class="text-red-400 text-center py-10 font-bold">Maalesef sonuç bulunamadı.</p>';
-            }
+            renderSearchResults(data);
         } catch (error) {
-            console.error("Hata:", error);
-            searchResultList.innerHTML = '<p class="text-red-400 text-center py-10">Sunucu hatası! app.py çalışıyor mu?</p>';
+            searchResultList.innerHTML = '<p class="text-center text-red-400">Hata!</p>';
         } finally {
             inputButton.innerText = "ARA";
             inputButton.disabled = false;
@@ -76,29 +77,27 @@
 
     function renderSearchResults(results) {
         searchResultList.innerHTML = '';
+        if (results.length === 0) {
+            searchResultList.innerHTML = '<p class="text-center py-10">Sonuç bulunamadı.</p>';
+            return;
+        }
         results.forEach(p => {
             const div = document.createElement('div');
-            div.className = "result-item p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-4 cursor-pointer transition-all";
+            div.className = "flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5 hover:border-green-500/50 cursor-pointer transition-all";
             div.innerHTML = `
-                <img src="${p.photo}" class="w-12 h-16 rounded-lg object-cover border border-white/10" onerror="this.src='https://via.placeholder.com/50x65?text=?'">
+                <img src="${p.photo}" class="w-10 h-12 rounded object-cover shadow-lg" onerror="this.src='https://via.placeholder.com/40x50'">
                 <div class="flex-1">
-                    <p class="text-white font-bold text-base leading-none">${p.name}</p>
-                    <p class="text-green-400 text-[10px] font-bold uppercase mt-2 tracking-tighter">${p.club}</p>
+                    <p class="text-white font-bold text-sm">${p.name}</p>
+                    <p class="text-green-500 text-[10px] font-bold uppercase">${p.club}</p>
                 </div>
-                <span class="text-white/20 text-xs font-bold bg-white/5 px-3 py-1 rounded-full group-hover:bg-green-500 group-hover:text-white transition-all">SEÇ</span>
+                <span class="text-[10px] bg-green-600 px-2 py-1 rounded font-black">SEÇ</span>
             `;
-            div.onclick = () => {
-                closeResults();
-                fetchDetay(p.id);
-            };
+            div.onclick = () => { closeResults(); fetchDetay(p.id); };
             searchResultList.appendChild(div);
         });
     }
 
-    function closeResults() {
-        searchPanel.classList.add('hidden');
-        isimInput.value = "";
-    }
+    function closeResults() { searchPanel.classList.add('hidden'); isimInput.value = ""; }
 
     async function fetchDetay(path) {
         try {
@@ -106,48 +105,32 @@
             const data = await response.json();
             
             const randomId = "id_" + Date.now();
-            const kupaHTML = data.achievements.map(a => `
-                <span class="bg-yellow-500/10 text-yellow-400 text-[8px] px-1.5 py-0.5 rounded border border-yellow-500/20">
-                    ${a.count}x ${a.title}
-                </span>`).join(' ');
-
             const cardHTML = `
-                <div class="card-body text-white p-6 w-full relative group" id="${randomId}">
-                    <button onclick="deleteCard('${randomId}')" class="delete-btn absolute top-4 right-4 w-7 h-7 flex items-center justify-center bg-white/10 text-white rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10">
-                        <span class="text-lg leading-none">&times;</span>
-                    </button>
-                    <div class="flex flex-wrap gap-1 mb-4 pr-8">${kupaHTML}</div>
-                    <div class="flex items-start gap-6 mb-6">
-                        <div class="relative">
-                            <div class="absolute -inset-1 bg-green-500 rounded-2xl blur opacity-20"></div>
-                            <img src="${data.foto}" class="relative w-32 h-44 rounded-2xl border-2 border-white/10 shadow-2xl object-cover bg-slate-800" onerror="this.src='https://via.placeholder.com/150x200'">
-                        </div>
-                        <div class="flex-1">
-                            <h2 class="text-2xl font-black uppercase tracking-tighter leading-tight">${data.isim}</h2>
-                            <p class="text-green-400 font-bold text-xs uppercase mb-3">${data.takim}</p>
-                            <div class="grid grid-cols-1 gap-1 text-[10px]">
-                                <div class="flex justify-between border-b border-white/5 pb-1"><span>DOĞUM:</span> <b class="text-white">${data.dogum}</b></div>
-                                <div class="flex justify-between border-b border-white/5 pb-1"><span>AYAK:</span> <b class="text-white">${data.ayak}</b></div>
-                                <div class="flex justify-between border-b border-white/5 pb-1"><span>BOY:</span> <b class="text-white">${data.boy}</b></div>
+                <div class="player-card card-animate relative bg-slate-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl hover:border-green-500/30 transition-all group" id="${randomId}">
+                    <button onclick="deleteCard('${randomId}')" class="absolute top-3 right-3 w-6 h-6 bg-red-500/10 hover:bg-red-500 text-white rounded-full flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-all">&times;</button>
+                    
+                    <div class="p-4">
+                        <div class="flex gap-4 items-center mb-4">
+                            <div class="relative min-w-[80px]">
+                                <img src="${data.foto}" class="w-20 h-28 rounded-xl object-cover border border-white/10 bg-slate-800 shadow-xl" onerror="this.src='https://via.placeholder.com/100x140'">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 class="text-lg font-black leading-tight uppercase tracking-tighter truncate">${data.isim}</h2>
+                                <p class="text-green-500 font-bold text-[10px] uppercase truncate mb-2">${data.takim}</p>
+                                <div class="space-y-1 text-[9px] text-slate-400 uppercase">
+                                    <div class="flex justify-between border-b border-white/5 pb-0.5"><span>YAŞ:</span> <b class="text-white">${data.dogum}</b></div>
+                                    <div class="flex justify-between border-b border-white/5 pb-0.5"><span>MEVKİ:</span> <b class="text-white">${data.mevki}</b></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 mb-5">
-                        <div class="bg-white/5 p-3 rounded-xl border border-white/10 text-[9px]">
-                            <p class="text-white/40 font-bold uppercase text-[8px] mb-1">Mevki / Uyruk</p>
-                            <p class="font-medium">${data.mevki} / ${data.uyruk}</p>
+
+                        <div class="flex justify-between items-end pt-3 border-t border-white/5">
+                            <div>
+                                <p class="text-[8px] text-slate-500 uppercase font-bold tracking-widest">Market Value</p>
+                                <p class="text-2xl font-black text-green-500 tracking-tighter">${data.piyasa_degeri}</p>
+                            </div>
+                            <img src="https://www.transfermarkt.com.tr/favicon.ico" class="w-4 h-4 opacity-20">
                         </div>
-                        <div class="bg-white/5 p-3 rounded-xl border border-white/10 text-[9px]">
-                            <p class="text-white/40 font-bold uppercase text-[8px] mb-1">Sözleşme Bitiş</p>
-                            <p class="font-medium text-red-400">${data.sozlesme_bit}</p>
-                        </div>
-                    </div>
-                    <div class="flex justify-between items-end pt-3 border-t border-white/10">
-                        <div>
-                            <p class="text-[9px] text-white/40 uppercase font-black mb-1 tracking-widest">Piyasa Değeri</p>
-                            <p class="text-4xl font-black text-green-400 tracking-tighter drop-shadow-lg">${data.piyasa_degeri}</p>
-                        </div>
-                        <img src="https://www.transfermarkt.com.tr/favicon.ico" class="w-5 h-5 opacity-30">
                     </div>
                 </div>`;
             
@@ -157,33 +140,27 @@
     }
 
     function renderCard(htmlContent) {
-        const wrapper = document.createElement('div');
-        wrapper.className = "card card-animate glow-effect w-full bg-slate-900/90 rounded-3xl shadow-2xl border border-white/10 mb-4 transform transition-all hover:scale-[1.01]";
-        wrapper.innerHTML = htmlContent;
-        dataContainer.insertAdjacentElement('afterbegin', wrapper);
+        const temp = document.createElement('div');
+        temp.innerHTML = htmlContent;
+        dataContainer.prepend(temp.firstElementChild);
     }
 
     function deleteCard(id) {
-        const cardBody = document.getElementById(id);
-        const card = cardBody.closest('.card');
-        card.classList.add('opacity-0', 'scale-75', 'duration-300');
-        setTimeout(() => {
-            localStorage.removeItem(id);
-            card.remove();
-        }, 300);
+        const el = document.getElementById(id);
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.9)';
+        setTimeout(() => { localStorage.removeItem(id); el.remove(); }, 300);
     }
 
-    function getDbItems() {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            const value = localStorage.getItem(key);
-            if (value && value.includes('card-body')) renderCard(value);
-        }
+    function loadSaved() {
+        Object.keys(localStorage).forEach(key => {
+            if(key.startsWith('id_')) renderCard(localStorage.getItem(key));
+        });
     }
 
     inputButton.addEventListener("click", performSearch);
     isimInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
-    window.onload = getDbItems;
+    window.onload = loadSaved;
 </script>
 </body>
 </html>
